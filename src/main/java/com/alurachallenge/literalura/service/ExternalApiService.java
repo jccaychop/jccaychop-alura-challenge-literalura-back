@@ -1,5 +1,7 @@
 package com.alurachallenge.literalura.service;
 
+import com.alurachallenge.literalura.dto.AuthorDTO;
+import com.alurachallenge.literalura.dto.BookDTO;
 import com.alurachallenge.literalura.model.Author;
 import com.alurachallenge.literalura.model.Book;
 import com.alurachallenge.literalura.model.GutendexResponse;
@@ -25,7 +27,7 @@ public class ExternalApiService {
     @Autowired
     private ExternalApiCall externalApiCall;
 
-    private ConvertsData convertsData = new ConvertsData();
+    private final ConvertsData convertsData = new ConvertsData();
 
     @Autowired
     private BookRepository bookRepository;
@@ -40,8 +42,14 @@ public class ExternalApiService {
     private GutendexResponse getGutendexResponse(String text, String endpoint) {
         var json = externalApiCall.getData(apiUrl + endpoint + encoderURL(text));
 
-        GutendexResponse gutendexResponse = convertsData.getData(json, GutendexResponse.class);
-        return gutendexResponse;
+        return convertsData.getData(json, GutendexResponse.class);
+    }
+
+    public List<BookDTO> searchBooks(String title, String endpoint) {
+        List<Book> books = searchBook(title, endpoint);
+        return books.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
     }
 
     public List<Book> searchBook(String text, String endpoint) {
@@ -78,4 +86,36 @@ public class ExternalApiService {
 
         return books;
     }
+
+    private BookDTO convertToDTO(Book book) {
+        List<AuthorDTO> authorDTOs = book.getAuthors().stream()
+                .map(author -> new AuthorDTO(
+                        author.getId(),
+                        author.getName(),
+                        author.getBirthYear(),
+                        author.getDeathYear()
+                ))
+                .collect(Collectors.toList());
+
+        List<AuthorDTO> translatorDTOs = book.getTranslators().stream()
+                .map(translator -> new AuthorDTO(
+                        translator.getId(),
+                        translator.getName(),
+                        translator.getBirthYear(),
+                        translator.getDeathYear()
+                ))
+                .collect(Collectors.toList());
+
+        return new BookDTO(
+                book.getId(),
+                book.getTitle(),
+                book.getSummaries(),
+                authorDTOs,
+                translatorDTOs,
+                book.getLanguages(),
+                book.getFormats(),
+                book.getDownloadCount()
+        );
+    }
+
 }
