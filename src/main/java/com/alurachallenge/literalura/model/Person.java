@@ -1,12 +1,13 @@
 package com.alurachallenge.literalura.model;
 
 import jakarta.persistence.*;
+
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "authors")
-public class Author {
+@Table(name = "people")
+public class Person {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -24,25 +25,21 @@ public class Author {
     @ManyToMany(mappedBy = "translators")
     private List<Book> translatedBooks = new ArrayList<>();
 
-    public Author() {
+    public Person() {
     }
 
-    public Author(String name) {
+    public Person(String name) {
         this.name = name.trim();
     }
 
-    public Author(DataAuthor dataAuthor) {
-        this.name = dataAuthor.name();
-        this.birthYear = dataAuthor.birthYear();
-        this.deathYear = dataAuthor.deathYear();
+    public Person(DataPerson dataPerson) {
+        this.name = dataPerson.name();
+        this.birthYear = dataPerson.birthYear();
+        this.deathYear = dataPerson.deathYear();
     }
 
     public Long getId() {
         return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
     }
 
     public String getName() {
@@ -85,13 +82,11 @@ public class Author {
         this.translatedBooks = translatedBooks;
     }
 
-    // equals y hashCode basados en name (único)
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof Author)) return false;
-        Author author = (Author) o;
-        return name != null && name.equalsIgnoreCase(author.name);
+        if (!(o instanceof Person that)) return false;
+        return name != null && name.equalsIgnoreCase(that.name);
     }
 
     @Override
@@ -101,6 +96,6 @@ public class Author {
 
     @Override
     public String toString() {
-        return "Author{id=" + id + ", name='" + name + "'}";
+        return "Person{id=" + id + ", name='" + name + "'}";
     }
 }

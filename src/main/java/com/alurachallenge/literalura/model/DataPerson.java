@@ -2,7 +2,7 @@ package com.alurachallenge.literalura.model;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
 
-public record DataAuthor(
+public record DataPerson(
         String name,
 
         @JsonAlias("birth_year")

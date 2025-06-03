@@ -1,13 +1,16 @@
 package com.alurachallenge.literalura.service;
 
-import com.alurachallenge.literalura.dto.AuthorDTO;
+import com.alurachallenge.literalura.api.response.ApiMessage;
+import com.alurachallenge.literalura.api.response.ApiResponse;
+import com.alurachallenge.literalura.api.response.SearchResultData;
 import com.alurachallenge.literalura.dto.BookDTO;
-import com.alurachallenge.literalura.model.Author;
+import com.alurachallenge.literalura.dto.PersonDTO;
 import com.alurachallenge.literalura.model.Book;
 import com.alurachallenge.literalura.model.GutendexResponse;
-import com.alurachallenge.literalura.repository.AuthorRepository;
+import com.alurachallenge.literalura.model.Person;
 import com.alurachallenge.literalura.repository.BookRepository;
-
+import com.alurachallenge.literalura.repository.PersonRepository;
+import com.alurachallenge.literalura.util.AppConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -33,18 +36,21 @@ public class ExternalApiService {
     private BookRepository bookRepository;
 
     @Autowired
-    private AuthorRepository authorRepository;
+    private PersonRepository personRepository;
 
-    private String encoderURL(String title) {
-        return URLEncoder.encode(title, StandardCharsets.UTF_8);
+    private String encoderURL(String text) {
+        return URLEncoder.encode(text, StandardCharsets.UTF_8);
     }
 
     private GutendexResponse getGutendexResponse(String text, String endpoint) {
         var json = externalApiCall.getData(apiUrl + endpoint + encoderURL(text));
-
         return convertsData.getData(json, GutendexResponse.class);
     }
 
+    /**
+     * Versión que devuelve List<BookDTO> (sin detalles de insert/duplicate).
+     * Se conserva por compatibilidad si necesitas usarla en algún otro punto.
+     */
     public List<BookDTO> searchBooks(String title, String endpoint) {
         List<Book> books = searchBook(title, endpoint);
         return books.stream()
@@ -52,57 +58,53 @@ public class ExternalApiService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Busca en la API externa, persiste los libros nuevos y retorna
+     * List<Book> (entidades recién creadas).
+     */
     public List<Book> searchBook(String text, String endpoint) {
         GutendexResponse data = getGutendexResponse(text, endpoint);
 
-        List<Book> books = data.books()
-                .stream()
+        // 1) Convertir cada DataBook → Book (el constructor de Book ya crea List<Person>)
+        List<Book> books = data.books().stream()
                 .map(Book::new)
                 .collect(Collectors.toList());
 
         for (Book book : books) {
-            // 1) Resuelvo autores
-            List<Author> resolvedAuthors = new ArrayList<>();
-            for (Author author : book.getAuthors()) {
-                Author savedAuthor = authorRepository.findByNameIgnoreCase(author.getName().trim())
-                        .orElseGet(() -> authorRepository.save(author));
-                resolvedAuthors.add(savedAuthor);
-            }
+            // 2) Resolver (persistir o recuperar) cada Person en authors
+            List<Person> resolvedAuthors = resolvePeople(book.getAuthors());
             book.setAuthors(resolvedAuthors);
 
-            // 2) Resuelvo traductores (¡esto faltaba!)
-            List<Author> resolvedTranslators = new ArrayList<>();
-            for (Author translator : book.getTranslators()) {
-                Author savedTranslator = authorRepository.findByNameIgnoreCase(translator.getName().trim())
-                        .orElseGet(() -> authorRepository.save(translator));
-                resolvedTranslators.add(savedTranslator);
-            }
+            // 3) Resolver (persistir o recuperar) cada Person en translators
+            List<Person> resolvedTranslators = resolvePeople(book.getTranslators());
             book.setTranslators(resolvedTranslators);
 
-            // 3) Ahora sí guardo el Book, con autores y traductores ya persistidos
-            Book saved = bookRepository.save(book);
-            // System.out.println("Libro guardado: " + saved);
+            // 4) Finalmente persisto el Book con las listas Person ya resueltas
+            bookRepository.save(book);
         }
 
         return books;
     }
 
+    /**
+     * Convierte entidad Book → BookDTO, incluyendo authors y translators como PersonDTO.
+     */
     private BookDTO convertToDTO(Book book) {
-        List<AuthorDTO> authorDTOs = book.getAuthors().stream()
-                .map(author -> new AuthorDTO(
-                        author.getId(),
-                        author.getName(),
-                        author.getBirthYear(),
-                        author.getDeathYear()
+        List<PersonDTO> authorDTOs = book.getAuthors().stream()
+                .map(person -> new PersonDTO(
+                        person.getId(),
+                        person.getName(),
+                        person.getBirthYear(),
+                        person.getDeathYear()
                 ))
                 .collect(Collectors.toList());
 
-        List<AuthorDTO> translatorDTOs = book.getTranslators().stream()
-                .map(translator -> new AuthorDTO(
-                        translator.getId(),
-                        translator.getName(),
-                        translator.getBirthYear(),
-                        translator.getDeathYear()
+        List<PersonDTO> translatorDTOs = book.getTranslators().stream()
+                .map(person -> new PersonDTO(
+                        person.getId(),
+                        person.getName(),
+                        person.getBirthYear(),
+                        person.getDeathYear()
                 ))
                 .collect(Collectors.toList());
 
@@ -118,4 +120,74 @@ public class ExternalApiService {
         );
     }
 
+    /**
+     * Versión con ApiResponse<SearchResultData> para que el controlador pueda
+     * informar cuántos libros se insertaron, cuántos fueron duplicados, etc.
+     */
+    public ApiResponse<SearchResultData> searchBooksWithResponse(String title, String endpoint) {
+        GutendexResponse data = getGutendexResponse(title, endpoint);
+
+        if (data.books() == null || data.books().isEmpty()) {
+            return ApiResponse.failure(List.of(
+                    new ApiMessage(AppConstants.CODE_NO_RESULTS, AppConstants.TEXT_NO_RESULTS)
+            ));
+        }
+
+        int inserted = 0;
+        int duplicates = 0;
+        List<BookDTO> addedBooks = new ArrayList<>();
+
+        for (var dataBook : data.books()) {
+            String bookTitle = dataBook.title();
+
+            if (bookRepository.existsByTitleIgnoreCase(bookTitle)) {
+                duplicates++;
+                continue;
+            }
+
+            // Crear entidad Book desde DataBook
+            Book book = new Book(dataBook);
+
+            // Resolver autores y traductores
+            List<Person> resolvedAuthors = resolvePeople(book.getAuthors());
+            List<Person> resolvedTranslators = resolvePeople(book.getTranslators());
+
+            book.setAuthors(resolvedAuthors);
+            book.setTranslators(resolvedTranslators);
+
+            // Guardar libro
+            Book saved = bookRepository.save(book);
+
+            // Convertir a DTO y añadir a la lista de resultados
+            addedBooks.add(convertToDTO(saved));
+            inserted++;
+        }
+
+        // Preparar datos de resultado
+        SearchResultData resultData = new SearchResultData(inserted, duplicates, addedBooks);
+
+        // Preparar mensajes
+        List<ApiMessage> messages = new ArrayList<>();
+        messages.add(new ApiMessage(AppConstants.CODE_SUCCESS, AppConstants.TEXT_SEARCH_COMPLETED));
+        if (inserted > 0)
+            messages.add(new ApiMessage(AppConstants.CODE_INSERTED, inserted + AppConstants.TEXT_CODE_INSERTED));
+        if (duplicates > 0)
+            messages.add(new ApiMessage(AppConstants.CODE_DUPLICATES, duplicates + AppConstants.TEXT_CODE_DUPLICATES));
+
+        return ApiResponse.success(resultData, messages);
+    }
+
+    /**
+     * Metodo auxiliar para resolver (persistir o recuperar) cada Person de una lista.
+     */
+    private List<Person> resolvePeople(List<Person> people) {
+        List<Person> resolved = new ArrayList<>();
+        for (Person person : people) {
+            Person found = personRepository
+                    .findByNameIgnoreCase(person.getName().trim())
+                    .orElseGet(() -> personRepository.save(person));
+            resolved.add(found);
+        }
+        return resolved;
+    }
 }

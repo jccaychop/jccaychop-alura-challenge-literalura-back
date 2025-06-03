@@ -10,11 +10,11 @@ import java.util.Map;
 public record DataBook(
         String title,
 
-        List<DataAuthor> authors,
+        List<DataPerson> authors,
 
         List<String> summaries,
 
-        List<DataAuthor> translators,
+        List<DataPerson> translators,
 
         List<String> languages,
 

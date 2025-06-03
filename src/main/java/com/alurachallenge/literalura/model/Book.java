@@ -1,5 +1,6 @@
 package com.alurachallenge.literalura.model;
 
+import com.alurachallenge.literalura.dto.PersonDTO;
 import jakarta.persistence.*;
 
 import java.util.*;
@@ -13,15 +14,17 @@ public class Book {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    //    @Column(unique = true)
+    @Column(unique = true, length = 2048, nullable = false)
     private String title;
 
     @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JoinTable(
             name = "book_authors",
             joinColumns = @JoinColumn(name = "book_id"),
-            inverseJoinColumns = @JoinColumn(name = "author_id")
+            inverseJoinColumns = @JoinColumn(name = "person_id")
     )
-    private List<Author> authors = new ArrayList<>();
+    private List<Person> authors = new ArrayList<>();
 
     @ElementCollection
     @CollectionTable(name = "book_summaries", joinColumns = @JoinColumn(name = "book_id"))
@@ -32,9 +35,9 @@ public class Book {
     @JoinTable(
             name = "book_translators",
             joinColumns = @JoinColumn(name = "book_id"),
-            inverseJoinColumns = @JoinColumn(name = "translator_id")
+            inverseJoinColumns = @JoinColumn(name = "person_id")
     )
-    private List<Author> translators = new ArrayList<>();
+    private List<Person> translators = new ArrayList<>();
 
     @ElementCollection
     @CollectionTable(name = "book_languages", joinColumns = @JoinColumn(name = "book_id"))
@@ -52,7 +55,7 @@ public class Book {
     public Book() {
     }
 
-    public Book(String title, List<Author> authors) {
+    public Book(String title, List<Person> authors) {
         this.title = title;
         this.authors = authors;
     }
@@ -64,18 +67,18 @@ public class Book {
         this.setFormats(dataBook.formats());
         this.downloadCount = dataBook.downloadCount();
 
-        dataBook.authors().forEach(data -> this.addAuthor(new Author(data)));
-        dataBook.translators().forEach(data -> this.addTranslator(new Author(data)));
+        dataBook.authors().forEach(data -> this.addAuthor(new Person(data)));
+        dataBook.translators().forEach(data -> this.addTranslator(new Person(data)));
     }
 
-    public void addAuthor(Author author) {
-        authors.add(author);
-        if (!author.getAuthoredBooks().contains(this)) {
-            author.getAuthoredBooks().add(this);
+    public void addAuthor(Person person) {
+        authors.add(person);
+        if (!person.getAuthoredBooks().contains(this)) {
+            person.getAuthoredBooks().add(this);
         }
     }
 
-    public void addTranslator(Author translator) {
+    public void addTranslator(Person translator) {
         translators.add(translator);
         if (!translator.getTranslatedBooks().contains(this)) {
             translator.getTranslatedBooks().add(this);
@@ -86,10 +89,6 @@ public class Book {
         return id;
     }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
-
     public String getTitle() {
         return title;
     }
@@ -98,11 +97,11 @@ public class Book {
         this.title = title;
     }
 
-    public List<Author> getAuthors() {
+    public List<Person> getAuthors() {
         return authors;
     }
 
-    public void setAuthors(List<Author> authors) {
+    public void setAuthors(List<Person> authors) {
         this.authors = authors;
     }
 
@@ -114,11 +113,11 @@ public class Book {
         this.summaries = summaries;
     }
 
-    public List<Author> getTranslators() {
+    public List<Person> getTranslators() {
         return translators;
     }
 
-    public void setTranslators(List<Author> translators) {
+    public void setTranslators(List<Person> translators) {
         this.translators = translators;
     }
 
@@ -140,13 +139,12 @@ public class Book {
             return;
         }
 
-        // Se define un conjunto con las claves que serán aceptadas
+        // Aceptar solo los formatos permitidos
         Set<String> allowedFormats = Set.of(
                 "application/epub+zip",
                 "image/jpeg"
         );
 
-        // Se filtra el mapa para dejar solo las entradas permitidas
         this.formats = formats.entrySet().stream()
                 .filter(entry -> allowedFormats.contains(entry.getKey()))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
@@ -160,13 +158,35 @@ public class Book {
         this.downloadCount = downloadCount;
     }
 
+    public List<PersonDTO> getAuthorsAsDTOs() {
+        return authors.stream()
+                .map(person -> new PersonDTO(
+                        person.getId(),
+                        person.getName(),
+                        person.getBirthYear(),
+                        person.getDeathYear()
+                ))
+                .collect(Collectors.toList());
+    }
+
+    public List<PersonDTO> getTranslatorsAsDTOs() {
+        return translators.stream()
+                .map(person -> new PersonDTO(
+                        person.getId(),
+                        person.getName(),
+                        person.getBirthYear(),
+                        person.getDeathYear()
+                ))
+                .collect(Collectors.toList());
+    }
+
     @Override
     public String toString() {
         return "Book{" +
                 "id=" + id +
                 ", title='" + title + '\'' +
-                ", authors=" + authors.stream().map(Author::getName).toList() +
-                ", translators=" + translators.stream().map(Author::getName).toList() +
+                ", authors=" + authors.stream().map(Person::getName).toList() +
+                ", translators=" + translators.stream().map(Person::getName).toList() +
                 ", languages=" + languages +
                 ", downloadCount=" + downloadCount +
                 '}';
