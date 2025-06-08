@@ -20,4 +20,5 @@ public final class AppConstants {
     public static final String TEXT_CODE_INSERTED = " libros insertados.";
     public static final String TEXT_CODE_DUPLICATES = " libros ya existían.";
     public static final String TEXT_NO_RESULTS = "No se encontraron libros con ese título.";
+    public static final String TEXT_NO_RESULTS_LIST = "No se encontraron libros.";
 }

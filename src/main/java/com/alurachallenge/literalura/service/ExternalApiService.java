@@ -48,45 +48,6 @@ public class ExternalApiService {
     }
 
     /**
-     * Versión que devuelve List<BookDTO> (sin detalles de insert/duplicate).
-     * Se conserva por compatibilidad si necesitas usarla en algún otro punto.
-     */
-    public List<BookDTO> searchBooks(String title, String endpoint) {
-        List<Book> books = searchBook(title, endpoint);
-        return books.stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * Busca en la API externa, persiste los libros nuevos y retorna
-     * List<Book> (entidades recién creadas).
-     */
-    public List<Book> searchBook(String text, String endpoint) {
-        GutendexResponse data = getGutendexResponse(text, endpoint);
-
-        // 1) Convertir cada DataBook → Book (el constructor de Book ya crea List<Person>)
-        List<Book> books = data.books().stream()
-                .map(Book::new)
-                .collect(Collectors.toList());
-
-        for (Book book : books) {
-            // 2) Resolver (persistir o recuperar) cada Person en authors
-            List<Person> resolvedAuthors = resolvePeople(book.getAuthors());
-            book.setAuthors(resolvedAuthors);
-
-            // 3) Resolver (persistir o recuperar) cada Person en translators
-            List<Person> resolvedTranslators = resolvePeople(book.getTranslators());
-            book.setTranslators(resolvedTranslators);
-
-            // 4) Finalmente persisto el Book con las listas Person ya resueltas
-            bookRepository.save(book);
-        }
-
-        return books;
-    }
-
-    /**
      * Convierte entidad Book → BookDTO, incluyendo authors y translators como PersonDTO.
      */
     private BookDTO convertToDTO(Book book) {
