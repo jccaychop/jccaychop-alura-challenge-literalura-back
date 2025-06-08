@@ -1,7 +1,7 @@
 package com.alurachallenge.literalura.controller;
 
 import com.alurachallenge.literalura.api.response.ApiResponse;
-import com.alurachallenge.literalura.api.response.BooksOnlyData;
+import com.alurachallenge.literalura.api.response.BooksListResponse;
 import com.alurachallenge.literalura.api.response.SearchResultData;
 import com.alurachallenge.literalura.service.BookService;
 import com.alurachallenge.literalura.service.ExternalApiService;
@@ -20,7 +20,7 @@ public class BookController {
     private ExternalApiService externalApiService;
 
     @GetMapping("/books")
-    public ApiResponse<BooksOnlyData> getBooks() {
+    public ApiResponse<BooksListResponse> getBooks() {
         return service.getAllBooks();
     }
 

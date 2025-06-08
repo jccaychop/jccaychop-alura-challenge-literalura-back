@@ -14,6 +14,7 @@ public class ApiResponse<T> {
     private String status;            // "success" o "error"
     private List<ApiMessage> messages;
     private T data;
+    private int count;
 
     private ApiResponse(String status, List<ApiMessage> messages, T data) {
         this.status = status;
@@ -21,11 +22,22 @@ public class ApiResponse<T> {
         this.data = data;
     }
 
+    private ApiResponse(String status, List<ApiMessage> messages, T data, int count) {
+        this.status = status;
+        this.messages = messages;
+        this.data = data;
+        this.count = count;
+    }
+
     /**
      * Construye una respuesta exitosa, con data y lista de mensajes.
      */
     public static <T> ApiResponse<T> success(T data, List<ApiMessage> messages) {
         return new ApiResponse<>(AppConstants.CODE_SUCCESS, messages, data);
+    }
+
+    public static <T> ApiResponse<T> success(T data, List<ApiMessage> messages, int count) {
+        return new ApiResponse<>(AppConstants.CODE_SUCCESS, messages, data, count);
     }
 
     /**
@@ -59,5 +71,13 @@ public class ApiResponse<T> {
 
     public void setData(T data) {
         this.data = data;
+    }
+
+    public int getCount() {
+        return count;
+    }
+
+    public void setCount(int count) {
+        this.count = count;
     }
 }

@@ -18,7 +18,8 @@ public final class AppConstants {
     // === Textos de mensajes API ===
     public static final String TEXT_SEARCH_COMPLETED = "Búsqueda completada.";
     public static final String TEXT_CODE_INSERTED = " libros insertados.";
-    public static final String TEXT_CODE_DUPLICATES = " libros ya existían.";
-    public static final String TEXT_NO_RESULTS = "No se encontraron libros con ese título.";
-    public static final String TEXT_NO_RESULTS_LIST = "No se encontraron libros.";
+    public static final String TEXT_CODE_DUPLICATES = " libros duplicados omitidos.";
+    public static final String TEXT_NO_RESULTS = "No se encontraron resultados para la búsqueda.";
+    public static final String TEXT_NO_RESULTS_LIST = "No se encontraron registros.";
+    public static final String TEXT_RESULTS_LIST = " registros encontrados.";
 }

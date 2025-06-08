@@ -2,7 +2,7 @@ package com.alurachallenge.literalura.service;
 
 import com.alurachallenge.literalura.api.response.ApiMessage;
 import com.alurachallenge.literalura.api.response.ApiResponse;
-import com.alurachallenge.literalura.api.response.BooksOnlyData;
+import com.alurachallenge.literalura.api.response.BooksListResponse;
 import com.alurachallenge.literalura.dto.BookDTO;
 import com.alurachallenge.literalura.model.Book;
 import com.alurachallenge.literalura.repository.BookRepository;
@@ -20,10 +20,9 @@ public class BookService {
     private BookRepository repository;
 
     /**
-     * Versión con ApiResponse<BooksOnlyData> para que el controlador pueda informar
-     * cuantos la lista de libros almacenados en al BD y la cantidad.
+     * Lista de todos los libros almacenados en la BD.
      */
-    public ApiResponse<BooksOnlyData> getAllBooks() {
+    public ApiResponse<BooksListResponse> getAllBooks() {
         var data = convertDataBook(repository.findAll());
 
         if (data == null || data.isEmpty()) {
@@ -32,12 +31,14 @@ public class BookService {
             ));
         }
 
-        BooksOnlyData resultData = new BooksOnlyData(data);
+        BooksListResponse booksListResponse = new BooksListResponse(data);
+        int count = booksListResponse.getBooks().size();
 
         List<ApiMessage> messages = new ArrayList<>();
         messages.add(new ApiMessage(AppConstants.CODE_SUCCESS, AppConstants.TEXT_SEARCH_COMPLETED));
+        messages.add(new ApiMessage(AppConstants.CODE_SUCCESS, count + AppConstants.TEXT_RESULTS_LIST));
 
-        return ApiResponse.success(resultData, messages);
+        return ApiResponse.success(booksListResponse, messages, count);
     }
 
     /**

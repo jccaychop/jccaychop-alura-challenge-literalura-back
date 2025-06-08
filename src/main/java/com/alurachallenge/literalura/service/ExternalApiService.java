@@ -135,7 +135,7 @@ public class ExternalApiService {
         if (duplicates > 0)
             messages.add(new ApiMessage(AppConstants.CODE_DUPLICATES, duplicates + AppConstants.TEXT_CODE_DUPLICATES));
 
-        return ApiResponse.success(resultData, messages);
+        return ApiResponse.success(resultData, messages, addedBooks.size());
     }
 
     /**
