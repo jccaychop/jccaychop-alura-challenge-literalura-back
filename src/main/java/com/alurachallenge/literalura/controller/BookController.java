@@ -7,6 +7,7 @@ import com.alurachallenge.literalura.api.response.SearchResultData;
 import com.alurachallenge.literalura.service.BookService;
 import com.alurachallenge.literalura.service.ExternalApiService;
 import com.alurachallenge.literalura.util.AppConstants;
+import io.swagger.v3.oas.annotations.Parameter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,10 +31,19 @@ public class BookController {
         return service.getAllLanguages();
     }
 
+
+
     @GetMapping("/books/languages/{language}")
-    private ApiResponse<BooksListResponse> getAllBooksByLanguage(@PathVariable String language) {
+    public ApiResponse<BooksListResponse> getAllBooksByLanguage(
+            @Parameter(
+                    description = "Código de idioma en formato ISO 639-1 (por ejemplo, 'es' para español, 'en' para inglés)",
+                    example = "es"
+            )
+            @PathVariable String language
+    ) {
         return service.getAllBooksByLanguage(language);
     }
+
 
     // petición a la API externa
     // /books/search?title=
