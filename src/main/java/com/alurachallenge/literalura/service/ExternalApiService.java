@@ -82,7 +82,7 @@ public class ExternalApiService {
     }
 
     /**
-     * Versión con ApiResponse<SearchResultData> para que el controlador pueda
+     * ApiResponse<SearchResultData> para que el controlador pueda
      * informar cuántos libros se insertaron, cuántos fueron duplicados, etc.
      */
     public ApiResponse<SearchResultData> searchBooksWithResponse(String title, String endpoint) {
